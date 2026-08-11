@@ -4,6 +4,25 @@
 
 - Release date and verified benchmark aggregates remain pending.
 
+## 0.3.0-alpha.3 - Unreleased
+
+### Added
+
+- Added three explicit Skills: `$coh:set-up`, `$coh:build`, and `$coh:check`.
+- Added an evidence-backed Build Plan handoff between read-only assessment and authorized construction.
+
+### Changed
+
+- Split the former single Bootstrap Skill into distinct planning, mutation, and diagnostic responsibilities.
+- Moved shared references to the plugin-level `references/` directory so all three Skills use one maintenance contract.
+- Updated plugin metadata and onboarding for the three-Skill workflow.
+
+### Safety boundaries
+
+- Set Up and Check are read-only.
+- Build requires an accepted current Build Plan and is limited to its explicit repository targets.
+- Lifecycle Hooks remain plugin-wide adapters and never inherit Build authorization.
+
 ## 0.3.0-alpha.2 - Unreleased
 
 ### Changed

@@ -1,0 +1,6 @@
+interface:
+  display_name: "CoH Set Up"
+  short_description: "Assess and plan a repository harness safely"
+  default_prompt: "Use $coh:set-up to assess this repository and produce a read-only CoH Build Plan."
+policy:
+  allow_implicit_invocation: false

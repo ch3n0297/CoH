@@ -1,7 +1,0 @@
-interface:
-  display_name: "CoH"
-  short_description: "Bootstrap a repository-specific Code of Harness"
-  default_prompt: "Use $coh to inspect this repository, integrate its existing authorities, and attempt a complete recoverable Harness Bootstrap ending in READY or evidence-backed BLOCKED."
-
-policy:
-  allow_implicit_invocation: false

@@ -1,6 +1,6 @@
 {
   "name": "coh",
-  "version": "0.3.0-alpha.2",
+  "version": "0.3.0-alpha.3",
   "description": "CoH (Code of Harness) routes coding agents through repository-owned guidance and collects bounded, report-only validation evidence.",
   "author": {
     "name": "hjcloog"
@@ -18,21 +18,23 @@
   "interface": {
     "displayName": "CoH",
     "shortDescription": "Plan and route repository harness work",
-    "longDescription": "Combine one explicit CoH Bootstrap Skill with opt-in task routing and report-only validation receipt collection. Repository files remain the authority, and lifecycle hooks never edit Guide, Fact Map, AGENTS.md, tests, or CI.",
+    "longDescription": "Use three explicit CoH Skills to assess, build, and check a repository harness, with opt-in task routing and report-only validation receipt collection. Repository files remain the authority, and lifecycle hooks never edit Guide, Fact Map, AGENTS.md, tests, or CI.",
     "developerName": "hjcloog",
     "category": "Developer Tools",
     "brandColor": "#38BDF8",
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",
     "capabilities": [
-      "Run a Harness Need Gate",
-      "Inspect existing repository harness controls",
-      "Construct a recoverable READY or BLOCKED Harness Model",
+      "Assess repository harness needs without writes",
+      "Build an approved repository Harness Model",
+      "Check existing Harness Model readiness",
       "Route opted-in tasks to repository-owned guidance",
       "Collect sanitized report-only validation candidates"
     ],
     "defaultPrompt": [
-      "Use $coh to assess this repository's agent harness."
+      "Use $coh:set-up to assess this repository without changing it.",
+      "Use $coh:build to construct an approved repository harness.",
+      "Use $coh:check to validate the existing repository harness."
     ]
   }
 }

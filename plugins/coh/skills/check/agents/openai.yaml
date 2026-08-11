@@ -1,0 +1,6 @@
+interface:
+  display_name: "CoH Check"
+  short_description: "Check an existing repository harness safely"
+  default_prompt: "Use $coh:check to validate the existing CoH harness without changing it."
+policy:
+  allow_implicit_invocation: false

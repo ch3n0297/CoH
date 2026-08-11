@@ -1,7 +1,9 @@
-contract_version: 4
+contract_version: 5
 
 applies_when:
-  - "bootstrap_harness"
+  - "set_up_harness"
+  - "build_harness"
+  - "check_harness"
   - "maintain_skill"
   - "review_skill"
   - "package_skill"
@@ -12,10 +14,9 @@ activation:
   explicit_only: true
   host_syntax:
     codex:
-      - "$coh"
-      - "$coh:coh"
-    claude-code:
-      - "/coh:coh"
+      - "$coh:set-up"
+      - "$coh:build"
+      - "$coh:check"
   explicit_user_intent:
     - "CoH"
     - "Harness Engineering"
@@ -29,20 +30,31 @@ activation:
     - "one-off scripts"
     - "straightforward bug fixes"
 
-required_sections:
-  - "Activation Boundary"
-  - "First-Call Bootstrap Boundary"
-  - "Lifecycle Hook Boundary"
-  - "When Not To Use"
-  - "Maintenance Self-Check"
-  - "Bootstrap Workflow"
-  - "Need Gate"
-  - "Harness Model"
-  - "Output Contracts"
-  - "Control Selection and Proof Boundaries"
-  - "Real-World Learning Loop"
-  - "References"
-  - "Recommendation Rules"
+skill_contracts:
+  set-up:
+    mutation: false
+    purpose: "run the Need Gate and produce an evidence-backed Build Plan"
+    decisions:
+      - "NEEDS_HARNESS"
+      - "NO_HARNESS"
+      - "INSUFFICIENT_EVIDENCE"
+    output: "CoH Setup Result"
+  build:
+    mutation: "only within an accepted, current Build Plan"
+    purpose: "construct a recoverable repository harness"
+    terminal_states:
+      - "READY"
+      - "BLOCKED"
+      - "NEEDS_SETUP"
+    output: "CoH Build Result"
+  check:
+    mutation: false
+    purpose: "diagnose an existing Harness Model and its bounded evidence"
+    structural_states:
+      - "VALID"
+      - "INVALID"
+      - "MISSING"
+    output: "CoH Check Result"
 
 need_gate:
   decisions:
@@ -50,7 +62,7 @@ need_gate:
     - "NO_HARNESS"
     - "INSUFFICIENT_EVIDENCE"
   first_explicit_invocation:
-    needs_harness: "attempt complete Bootstrap in the same task"
+    needs_harness: "produce a Build Plan and wait for a separately authorized build"
     no_harness: "do not create Harness files"
     insufficient_evidence: "do not create a speculative model"
 
@@ -75,9 +87,13 @@ control_levels:
   - "report-only"
 
 authorization:
-  explicit_bootstrap:
+  set-up:
+    repository_mutation: false
+    external_mutation: false
+  build:
     repository_local_mutation: true
-    allowed_without_second_confirmation:
+    requires: "accepted current Build Plan and explicit $coh:build invocation"
+    allowed_within_accepted_plan:
       - "create canonical model and recoverable Bootstrap journal"
       - "create a new currently-unowned Guide or Sensor"
       - "update a clearly machine-owned extension block"
@@ -92,6 +108,9 @@ authorization:
       - "write external systems or migrate external data"
       - "use paid resources"
       - "request or change credentials or permissions"
+  check:
+    repository_mutation: false
+    external_mutation: false
   lifecycle_hooks:
     repository_mutation: false
     local_plugin_data: true
@@ -99,8 +118,10 @@ authorization:
 
 plugin_components:
   callable_skills:
-    - "coh"
-  callable_skill_count: 1
+    - "set-up"
+    - "build"
+    - "check"
+  callable_skill_count: 3
   lifecycle_hooks:
     - "UserPromptSubmit"
     - "Stop"
@@ -265,7 +286,7 @@ reference_roles:
   learning-loop.md: "real-world episode review and report-only Guide feedback promotion"
 
 self_check_behavior:
-  when_to_run: "only when explicitly bootstrapping, maintaining, reviewing, packaging, or evaluating"
+  when_to_run: "only when explicitly setting up, building, checking, maintaining, reviewing, packaging, or evaluating"
   contract_is_single_authority: true
 
 forbidden_regressions:
@@ -278,7 +299,7 @@ forbidden_regressions:
   - "uncalibrated heuristic used as a blocking gate"
   - "private provenance shipped in a distribution package"
   - "duplicate maintenance invariant list outside this contract"
-  - "second callable routing or Sensor Skill"
+  - "implicit or overlapping Skill activation that bypasses the explicit three-Skill workflow"
   - "keyword-based automatic routing"
   - "repository-wide discovery before a valid route is tried"
   - "generic plugin-owned validation runner"

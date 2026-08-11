@@ -1,0 +1,6 @@
+interface:
+  display_name: "CoH Build"
+  short_description: "Build an approved repository harness safely"
+  default_prompt: "Use $coh:build to construct the approved CoH Build Plan and verify the result."
+policy:
+  allow_implicit_invocation: false

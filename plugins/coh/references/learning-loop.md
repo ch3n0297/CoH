@@ -46,7 +46,7 @@ This is a trust downgrade, not an accusation and not an automatic revert. Editin
 
 ## Interaction review privacy
 
-Use the bundled `../../../schemas/episode-review.schema.json` for real-world episode reviews. Bind the review to hashes of the task reference, versioned in-memory routing projection, Guide revision, and supporting evidence. The legacy field name `registry_sha256` denotes that projection digest for receipt-v1 compatibility; it is not the raw `model.json` hash.
+Use the bundled `../schemas/episode-review.schema.json` for real-world episode reviews. Bind the review to hashes of the task reference, versioned in-memory routing projection, Guide revision, and supporting evidence. The legacy field name `registry_sha256` denotes that projection digest for receipt-v1 compatibility; it is not the raw `model.json` hash.
 
 Never place raw prompts, assistant messages, tool output, user-identifying prose, credentials, or absolute paths in an episode review. A reviewer may keep private evidence separately and put only its SHA-256 and allowlisted evidence kind in the review record.
 
@@ -56,7 +56,7 @@ User feedback becomes a structured outcome such as `requirement-alignment: parti
 
 ## Candidate promotion
 
-Run the bundled `../../../scripts/summarize_episode_reviews.py` over reviewed JSONL episodes. A candidate becomes eligible for human review only after it appears in at least three independent episodes spanning at least two task references.
+Run the bundled `../scripts/summarize_episode_reviews.py` over reviewed JSONL episodes. A candidate becomes eligible for human review only after it appears in at least three independent episodes spanning at least two task references.
 
 Eligibility does not authorize an update. Before changing a Guide:
 

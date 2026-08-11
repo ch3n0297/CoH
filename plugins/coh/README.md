@@ -18,20 +18,24 @@ codex plugin marketplace add ch3n0297/coh --json
 codex plugin add coh@coh --json
 ```
 
-Start a new Codex task so the new plugin is loaded, then invoke the explicit
-Bootstrap Skill from the repository you want to assess:
+Start a new Codex task so the new plugin is loaded, then invoke the read-only
+Set Up Skill from the repository you want to assess:
 
 ```text
-$coh:coh
+$coh:set-up
 ```
 
 Installing the plugin alone does not opt a repository in. Routing begins only
-when Bootstrap produces a valid, enabled, `READY` `.coh/model.json`.
+after you accept the Build Plan and `$coh:build` produces a valid, enabled,
+`READY` `.coh/model.json`.
 
 ## What is included
 
 - `.codex-plugin/plugin.json` — plugin identity and Codex interface metadata.
-- `skills/coh/` — the explicit Bootstrap workflow and its bounded references.
+- `skills/set-up/` — read-only Need Gate, live discovery, and Build Plan.
+- `skills/build/` — accepted-plan construction with bounded repository writes.
+- `skills/check/` — read-only model, routing, Sensor, Hook, and evidence checks.
+- `references/` — shared concepts, proof boundaries, and maintenance contract.
 - `hooks/hooks.json` — opt-in prompt routing and report-only Stop collection.
 - `hooks/*.py` — dependency-free Python runtime for model loading, routing,
   containment checks, nonce binding, and receipt review.
@@ -42,12 +46,14 @@ when Bootstrap produces a valid, enabled, `READY` `.coh/model.json`.
 
 ## Core behavior
 
-1. `$coh:coh` performs a Need Gate and read-only repository inspection.
-2. If a harness is justified, Bootstrap attempts to construct one canonical
-   `.coh/model.json` using live repository authorities.
-3. A `READY` model can route exact `[route:<id>]` tags or declared path prefixes.
-4. A repository-owned Sensor may produce a current nonce-bound receipt.
-5. Stop-time observations remain report-only candidates for human review.
+1. `$coh:set-up` performs a read-only Need Gate and produces an evidence-backed
+   Build Plan.
+2. `$coh:build` requires an accepted current plan, then constructs only its
+   authorized repository harness changes.
+3. `$coh:check` diagnoses the existing Harness Model without changing it.
+4. A `READY` model can route exact `[route:<id>]` tags or declared path prefixes.
+5. A repository-owned Sensor may produce a current nonce-bound receipt.
+6. Stop-time observations remain report-only candidates for human review.
 
 Use the bundled validator against a repository:
 
@@ -58,8 +64,10 @@ python3 /path/to/installed/coh/scripts/validate_harness_model.py /absolute/path/
 ## Safety boundaries
 
 - Hooks do not run arbitrary repository commands or block tools.
-- Hooks never edit Guide files, Fact Maps, `AGENTS.md`, tests, validation logic,
-  CI, or deployment configuration.
+- Set Up and Check are read-only. Build writes only within an accepted current
+  Build Plan.
+- Hooks never inherit Build authorization or edit Guide files, Fact Maps,
+  `AGENTS.md`, tests, validation logic, CI, or deployment configuration.
 - Missing, stale, ambiguous, or invalid evidence never becomes a pass.
 - Raw prompts, assistant messages, tool output, credentials, and absolute
   repository paths are not persisted by the lifecycle hooks.
