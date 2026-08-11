@@ -32,7 +32,6 @@ New papers and host sources must also follow `docs/RESEARCH.md` in the source re
 The three explicit Skills and lifecycle runtime have structural inputs outside this reference directory:
 
 - `../schemas/harness-model.schema.json` describes the one canonical repository Harness Model.
-- `../schemas/route-registry.schema.json` describes deprecated one-way migration input only.
 - `../schemas/validation-receipt.schema.json` describes repository-owned validation receipts.
 - `../schemas/episode-review.schema.json` describes privacy-bounded, human-reviewed real-world episodes.
 
@@ -40,4 +39,4 @@ These Schemas are structural contracts, not repository facts. Bootstrap integrat
 
 `../scripts/bootstrap_transaction.py` is a mechanics-only coordinator for adopted and create-only files. It does not select repository semantics, merge human prose, apply a Guide template, or run validation commands. Its journal and staging directory are temporary recovery material, never repository authority.
 
-`../scripts/migrate_to_coh.py` is the only repository namespace migrator. It is dry-run by default, journals before the same-parent rename, rewrites only schema-known repository-path fields, and never runs from a lifecycle hook. `../scripts/migrate_routes_to_model.py` separately converts `.coh/routes.json` into a `BLOCKED` Model without inventing maintenance ownership.
+Legacy `.hjc-code-harness/` and `.coh/routes.json` paths are non-authoritative conflict markers only. Lifecycle Hooks fail closed when they are present and never move, rewrite, or migrate them.

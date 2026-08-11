@@ -39,10 +39,9 @@ after you accept the Build Plan and `$coh:build` produces a valid, enabled,
 - `hooks/hooks.json` — opt-in prompt routing and report-only Stop collection.
 - `hooks/*.py` — dependency-free Python runtime for model loading, routing,
   containment checks, nonce binding, and receipt review.
-- `schemas/` — Harness Model, migration input, validation receipt, and episode
-  review schemas.
-- `scripts/` — model validation, namespace migration, recoverable Bootstrap
-  transactions, and report-only review helpers.
+- `schemas/` — Harness Model, validation receipt, and episode review schemas.
+- `scripts/` — model validation, recoverable Build transactions, and report-only
+  review helpers.
 
 ## Core behavior
 
@@ -78,24 +77,13 @@ python3 /path/to/installed/coh/scripts/validate_harness_model.py /absolute/path/
 CoH is a workflow and evidence-calibration aid, not a security boundary or
 cryptographic attestation system.
 
-## Upgrade from the predecessor plugin
+## Legacy configurations
 
-There is no old-ID compatibility shim. Remove the predecessor plugin and
-marketplace explicitly, then install CoH:
-
-```bash
-codex plugin remove hjc-code-harness@hjc-code-harness --json
-codex plugin marketplace remove hjc-code-harness --json
-codex plugin marketplace add ch3n0297/coh --json
-codex plugin add coh@coh --json
-```
-
-Preview repository namespace migration before authorizing any write:
-
-```bash
-python3 /path/to/installed/coh/scripts/migrate_to_coh.py /absolute/path/to/repository --json
-python3 /path/to/installed/coh/scripts/migrate_to_coh.py /absolute/path/to/repository --write --json
-```
+CoH does not include a migration Skill or user-facing migration command. Legacy
+`.hjc-code-harness/` and `.coh/routes.json` configurations are not runtime
+authorities, and Hooks fail closed without moving or rewriting them. Use
+`$coh:set-up` to plan a fresh Harness Model, then explicitly authorize
+`$coh:build` if construction is appropriate.
 
 ## Update
 

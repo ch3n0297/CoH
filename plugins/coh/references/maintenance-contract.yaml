@@ -163,31 +163,15 @@ harness_model:
   physical_guide_layout_fixed: false
   runtime_projection: "derived in memory only"
 
-legacy_route_migration:
-  input: ".coh/routes.json"
-  direction: "one-way to model.json"
+legacy_configuration:
   runtime_authority: false
-  dual_read: false
-  dual_write: false
-  migration_may_invent_maintenance_owner: false
-  mechanical_result: "BLOCKED with MAINTENANCE_POLICY_UNCONFIRMED"
-  recovery: "matching model plus legacy input may finish removal; divergent files fail closed"
-
-namespace_migration:
-  predecessor_namespace: ".hjc-code-harness"
-  canonical_namespace: ".coh"
+  migration_skill: false
+  migration_command: false
+  markers:
+    ".hjc-code-harness": "LEGACY_NAMESPACE_UNSUPPORTED"
+    ".coh/routes.json": "LEGACY_ROUTES_UNSUPPORTED"
   lifecycle_hook_mutation: false
-  predecessor_only_behavior: "LEGACY_NAMESPACE_REQUIRES_MIGRATION"
-  dual_namespace_behavior: "COH_NAMESPACE_CONFLICT"
-  command: "scripts/migrate_to_coh.py"
-  default_mode: "dry-run"
-  direction: "one-way without automatic rollback"
-  journal_location: "inside the namespace so it survives the atomic rename"
-  path_rewrite_scope: "schema-known Model and route repository-path fields only"
-  preserves_model_construction_status: true
-  route_result: "BLOCKED with MAINTENANCE_POLICY_UNCONFIRMED"
   predecessor_receipts_trusted: false
-  worktree_digest_domain: "COH_WORKTREE_V2"
 
 routing:
   repository_opt_in_required: true
@@ -204,8 +188,8 @@ routing:
   ambiguous_behavior: "fixed degraded context and bounded discovery"
   absent_or_disabled_behavior: "silent no-op"
   blocked_behavior: "fixed MODEL_NOT_READY context with blocker codes"
-  migration_route_only_behavior: "LEGACY_ROUTES_REQUIRES_MIGRATION"
-  predecessor_namespace_behavior: "LEGACY_NAMESPACE_REQUIRES_MIGRATION"
+  legacy_route_only_behavior: "LEGACY_ROUTES_UNSUPPORTED"
+  predecessor_namespace_behavior: "LEGACY_NAMESPACE_UNSUPPORTED"
   dual_namespace_behavior: "COH_NAMESPACE_CONFLICT"
   authority: "referenced live repository files"
   receipt_route_effect_binding:
@@ -309,6 +293,6 @@ forbidden_regressions:
   - "composite score hiding routing, correctness, validation, or interaction dimensions"
   - "automatic rewrite of human-owned Guide, Fact Map, AGENTS.md, test, validation, CI, or deployment policy"
   - "model.json and routes.json used as simultaneous live authorities"
-  - "migration inventing maintenance ownership or READY confidence"
-  - "lifecycle hook automatically moving a predecessor repository namespace"
-  - "predecessor receipt accepted after CoH namespace migration"
+  - "legacy configuration accepted as a current runtime authority"
+  - "lifecycle hook moving or rewriting a legacy repository namespace"
+  - "predecessor receipt accepted as current CoH evidence"

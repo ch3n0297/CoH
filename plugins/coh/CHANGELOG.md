@@ -17,11 +17,17 @@
 - Moved shared references to the plugin-level `references/` directory so all three Skills use one maintenance contract.
 - Updated plugin metadata and onboarding for the three-Skill workflow.
 
+### Removed
+
+- Removed the user-facing predecessor namespace and legacy route migration commands.
+- Removed the legacy route-registry compatibility validator and schema from the installable package.
+
 ### Safety boundaries
 
 - Set Up and Check are read-only.
 - Build requires an accepted current Build Plan and is limited to its explicit repository targets.
 - Lifecycle Hooks remain plugin-wide adapters and never inherit Build authorization.
+- Legacy namespace and route files remain non-authoritative fail-closed markers; Hooks do not migrate them.
 
 ## 0.3.0-alpha.2 - Unreleased
 

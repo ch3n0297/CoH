@@ -471,25 +471,11 @@ def validate_registry(
     }
 
 
-def load_legacy_registry(root: Path) -> tuple[dict[str, Any], str]:
-    """Load the deprecated routes.json contract for one-way migration tooling."""
-
-    _, registry_path = _repo_path(
-        root,
-        REGISTRY_RELATIVE_PATH,
-        code="REGISTRY_PATH_INVALID",
-        must_exist=True,
-        must_be_file=True,
-    )
-    payload, digest = load_json_object(registry_path, MAX_REGISTRY_BYTES)
-    return validate_registry(root, payload), digest
-
-
 def load_registry(root: Path) -> tuple[dict[str, Any], str]:
     """Load the model-backed in-memory routing projection used by hooks.
 
-    The historical function name remains an internal compatibility boundary for
-    the receipt runtime. ``routes.json`` is never used as a second live source.
+    The function name remains an internal receipt-runtime boundary.
+    ``routes.json`` is never used as a second live source.
     """
 
     root = root.resolve(strict=True)
@@ -500,7 +486,7 @@ def load_registry(root: Path) -> tuple[dict[str, Any], str]:
     if namespace_declared and legacy_namespace_declared:
         raise ContractError("COH_NAMESPACE_CONFLICT")
     if legacy_namespace_declared:
-        raise ContractError("LEGACY_NAMESPACE_REQUIRES_MIGRATION")
+        raise ContractError("LEGACY_NAMESPACE_UNSUPPORTED")
     if not namespace_declared:
         raise ContractError("MODEL_MISSING")
     if namespace_path.is_symlink() or not namespace_path.is_dir():
@@ -515,7 +501,7 @@ def load_registry(root: Path) -> tuple[dict[str, Any], str]:
     if legacy_declared:
         if legacy_path.is_symlink() or not legacy_path.is_file():
             raise ContractError("REGISTRY_PATH_INVALID")
-        raise ContractError("LEGACY_ROUTES_REQUIRES_MIGRATION")
+        raise ContractError("LEGACY_ROUTES_UNSUPPORTED")
     if not model_declared:
         raise ContractError("MODEL_MISSING")
     if model_path.is_symlink() or not model_path.is_file():

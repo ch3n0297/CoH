@@ -12,6 +12,7 @@ from typing import Any
 from coh_hook_common import (
     LEGACY_NAMESPACE_RELATIVE_PATH,
     MODEL_RELATIVE_PATH,
+    NAMESPACE_RELATIVE_PATH,
     PROOF_LAYERS,
     REGISTRY_RELATIVE_PATH,
     ContractError,
@@ -599,10 +600,18 @@ def load_model(root: Path) -> tuple[dict[str, Any], str]:
     """Load Model v1 and return its normalized routing projection plus projection digest."""
 
     root = root.resolve(strict=True)
-    if os.path.lexists(root / LEGACY_NAMESPACE_RELATIVE_PATH):
+    namespace_declared = os.path.lexists(root / NAMESPACE_RELATIVE_PATH)
+    legacy_namespace_declared = os.path.lexists(root / LEGACY_NAMESPACE_RELATIVE_PATH)
+    if namespace_declared and legacy_namespace_declared:
         raise ContractError("COH_NAMESPACE_CONFLICT")
-    if os.path.lexists(root / REGISTRY_RELATIVE_PATH):
+    if legacy_namespace_declared:
+        raise ContractError("LEGACY_NAMESPACE_UNSUPPORTED")
+    model_declared = os.path.lexists(root / MODEL_RELATIVE_PATH)
+    legacy_routes_declared = os.path.lexists(root / REGISTRY_RELATIVE_PATH)
+    if model_declared and legacy_routes_declared:
         raise ContractError("MODEL_LEGACY_CONFLICT")
+    if legacy_routes_declared:
+        raise ContractError("LEGACY_ROUTES_UNSUPPORTED")
     _, model_path = _repo_path(
         root,
         MODEL_RELATIVE_PATH,
