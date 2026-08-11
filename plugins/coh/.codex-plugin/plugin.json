@@ -1,0 +1,38 @@
+{
+  "name": "coh",
+  "version": "0.3.0-alpha.2",
+  "description": "CoH (Code of Harness) routes coding agents through repository-owned guidance and collects bounded, report-only validation evidence.",
+  "author": {
+    "name": "hjcloog"
+  },
+  "homepage": "https://github.com/ch3n0297/coh",
+  "repository": "https://github.com/ch3n0297/coh",
+  "license": "MIT",
+  "keywords": [
+    "coding-agents",
+    "harness-engineering",
+    "codebase-navigation",
+    "validation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "CoH",
+    "shortDescription": "Plan and route repository harness work",
+    "longDescription": "Combine one explicit CoH Bootstrap Skill with opt-in task routing and report-only validation receipt collection. Repository files remain the authority, and lifecycle hooks never edit Guide, Fact Map, AGENTS.md, tests, or CI.",
+    "developerName": "hjcloog",
+    "category": "Developer Tools",
+    "brandColor": "#38BDF8",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
+    "capabilities": [
+      "Run a Harness Need Gate",
+      "Inspect existing repository harness controls",
+      "Construct a recoverable READY or BLOCKED Harness Model",
+      "Route opted-in tasks to repository-owned guidance",
+      "Collect sanitized report-only validation candidates"
+    ],
+    "defaultPrompt": [
+      "Use $coh to assess this repository's agent harness."
+    ]
+  }
+}

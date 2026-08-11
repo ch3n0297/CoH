@@ -1,0 +1,20 @@
+{
+  "name": "coh",
+  "interface": {
+    "displayName": "CoH"
+  },
+  "plugins": [
+    {
+      "name": "coh",
+      "source": {
+        "source": "local",
+        "path": "./plugins/coh"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

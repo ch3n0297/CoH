@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ch3n0297/coh/schemas/route-registry.schema.json",
+  "title": "CoH legacy route registry migration input",
+  "description": "Deprecated routes v1 structure accepted only by the one-way migration tool; it is not a runtime authority when model.json exists.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "enabled", "routes", "validations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "enabled": {"type": "boolean"},
+    "routes": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/route"}
+    },
+    "validations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/validation"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f]+$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "anchor_token"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "anchor_token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u001f]+$"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "explicit_tags",
+        "path_prefixes",
+        "agents_paths",
+        "guide_paths",
+        "fact_ref",
+        "validation_id"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "explicit_tags": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "path_prefixes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/relativePath"}
+        },
+        "agents_paths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {"$ref": "#/$defs/relativePath"},
+              {"pattern": "(?:^|/)AGENTS\\.md$"}
+            ]
+          }
+        },
+        "guide_paths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/relativePath"}
+        },
+        "fact_ref": {"$ref": "#/$defs/reference"},
+        "validation_id": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "declaration_ref", "proof_layer"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "declaration_ref": {"$ref": "#/$defs/reference"},
+        "proof_layer": {
+          "enum": [
+            "static",
+            "runtime",
+            "browser",
+            "live-provider",
+            "production",
+            "human-review"
+          ]
+        },
+        "receipt_path": {
+          "allOf": [
+            {"$ref": "#/$defs/relativePath"},
+            {"pattern": "^\\.coh/receipts/.+"}
+          ]
+        },
+        "protected_paths": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/relativePath"}
+        }
+      }
+    }
+  }
+}

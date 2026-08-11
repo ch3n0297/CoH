@@ -1,0 +1,28 @@
+{
+  "description": "Opt-in CoH task routing and report-only validation receipt collection.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/user_prompt_router.py\"",
+            "timeout": 5,
+            "statusMessage": "Applying repository harness route"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/stop_receipt_collector.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

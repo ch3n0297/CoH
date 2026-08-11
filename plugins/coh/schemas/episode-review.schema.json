@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ch3n0297/coh/schemas/episode-review.schema.json",
+  "title": "CoH real-world episode review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "episode_id",
+    "recorded_at",
+    "repo_id",
+    "host",
+    "route_id",
+    "task_kind",
+    "task_ref_sha256",
+    "registry_sha256",
+    "guide_sha256",
+    "evidence_mode",
+    "dimensions",
+    "candidate_codes",
+    "guide_update_authorized"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "episode_id": {"$ref": "#/$defs/identifier"},
+    "recorded_at": {"type": "string", "format": "date-time", "maxLength": 40},
+    "repo_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "host": {"$ref": "#/$defs/identifier"},
+    "route_id": {"$ref": "#/$defs/identifier"},
+    "task_kind": {
+      "enum": ["feature", "bugfix", "refactor", "maintenance", "investigation", "other"]
+    },
+    "task_ref_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "registry_sha256": {
+      "description": "Receipt-v1 compatibility name for the canonical in-memory routing projection digest.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "guide_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evidence_mode": {"enum": ["machine", "human-review", "combined"]},
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/dimension"}
+    },
+    "candidate_codes": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "guide_update_authorized": {"const": false}
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "receipt",
+            "official-evaluator",
+            "test-report",
+            "diff-review",
+            "trace-review",
+            "user-feedback",
+            "human-review"
+          ]
+        },
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "outcome", "evidence_refs"],
+      "properties": {
+        "id": {
+          "enum": [
+            "route-selection",
+            "guide-use",
+            "authority-selection",
+            "implementation-correctness",
+            "semantic-validation",
+            "validation-integrity",
+            "requirement-alignment",
+            "clarification-quality",
+            "evidence-calibration",
+            "followup-actionability"
+          ]
+        },
+        "outcome": {"enum": ["met", "partial", "missed", "unknown", "not-applicable"]},
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/evidenceRef"}
+        }
+      }
+    }
+  }
+}

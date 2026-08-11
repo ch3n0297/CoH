@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ch3n0297/coh/schemas/validation-receipt.schema.json",
+  "title": "CoH validation receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "validation_id",
+    "registry_sha256",
+    "commit_sha",
+    "worktree_sha256",
+    "run_nonce",
+    "result",
+    "exit_code",
+    "started_at",
+    "finished_at",
+    "runner_id",
+    "observations"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "validation_id": {"$ref": "#/$defs/identifier"},
+    "registry_sha256": {
+      "description": "Receipt-v1 compatibility name for the versioned canonical in-memory routing projection digest, including runtime eligibility; never the raw model.json digest.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "worktree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "run_nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "result": {"enum": ["pass", "fail"]},
+    "exit_code": {"type": "integer"},
+    "started_at": {"type": "string", "format": "date-time", "maxLength": 40},
+    "finished_at": {"type": "string", "format": "date-time", "maxLength": 40},
+    "runner_id": {"$ref": "#/$defs/identifier"},
+    "observations": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/observation"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"result": {"const": "pass"}}},
+      "then": {"properties": {"exit_code": {"const": 0}}},
+      "else": {"properties": {"exit_code": {"not": {"const": 0}}}}
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f]+$"
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "kind", "status", "evidence_path", "evidence_sha256"],
+      "properties": {
+        "code": {"$ref": "#/$defs/identifier"},
+        "kind": {"enum": ["test", "error", "semantic", "authority"]},
+        "status": {"enum": ["observed", "resolved", "regression"]},
+        "claim_id": {"$ref": "#/$defs/identifier"},
+        "outcome": {"enum": ["pass", "fail", "unknown"]},
+        "evidence_path": {"$ref": "#/$defs/relativePath"},
+        "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"enum": ["semantic", "authority"]}}},
+          "then": {"required": ["claim_id", "outcome"]}
+        }
+      ]
+    }
+  }
+}
