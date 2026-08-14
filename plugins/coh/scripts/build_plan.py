@@ -125,7 +125,7 @@ def _validate_plan(payload: dict[str, Any]) -> dict[str, Any]:
                 "operations",
                 "proof_boundaries",
             },
-            {"legacy_routes"},
+            set(),
             "BUILD_PLAN_FIELDS",
         )
     except ContractError as exc:

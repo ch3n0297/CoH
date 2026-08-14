@@ -102,9 +102,14 @@ package. It does not prove that a Hook command executed on an untested host.
 
 CoH does not include a migration Skill or user-facing migration command. Legacy
 `.hjc-code-harness/` and `.coh/routes.json` configurations are not runtime
-authorities, and Hooks fail closed without moving or rewriting them. Use
-`$coh:set-up` to plan a fresh Harness Model, then explicitly authorize
-`$coh:build` if construction is appropriate.
+authorities, and Hooks fail closed without moving or rewriting them. BuildPlan
+v1 cannot authorize their migration, and Build rejects a repository containing
+`.coh/routes.json` before starting a transaction. In `0.3.0-alpha.3` only, an
+already-interrupted schema-v1 journal that had begun
+route retirement can only be inspected or rolled back; it cannot apply,
+publish, or resume. Legacy journal parsing is scheduled for removal in the next
+plugin version. Remove predecessor configuration separately, then use
+`$coh:set-up` to plan a fresh Harness Model.
 
 ## Update
 

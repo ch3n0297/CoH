@@ -12,6 +12,7 @@ from common import (
     copy_fixture,
     git,
     load_json,
+    repository_snapshot,
     sha256_file,
     write_json,
 )
@@ -279,6 +280,79 @@ class BootstrapTransactionTests(unittest.TestCase):
                 self.accepted_plan_sha256,
             )
         self.assertEqual(input_error.exception.code, "PLAN_INPUT_CHANGED")
+
+    def test_legacy_plan_and_repository_marker_are_rejected_without_writes(self) -> None:
+        legacy_plan = copy.deepcopy(self.plan_payload)
+        legacy_plan["legacy_routes"] = {
+            "path": ".coh/routes.json",
+            "expected_sha256": "0" * 64,
+        }
+        self.plan.write_bytes(build_plan.canonical_json(legacy_plan))
+        digest = hashlib.sha256(self.plan.read_bytes()).hexdigest()
+        before = repository_snapshot(self.root)
+        with self.assertRaises(bootstrap.BootstrapError) as plan_error:
+            bootstrap.prepare_repository(self.root, self.plan, digest)
+        self.assertEqual(plan_error.exception.code, "PLAN_INVALID")
+        self.assertEqual(repository_snapshot(self.root), before)
+
+        self.write_current_plan()
+        legacy_routes = self.root / ".coh" / "routes.json"
+        legacy_routes.write_text('{"schema_version":1}\n', encoding="utf-8")
+        before = repository_snapshot(self.root)
+        with self.assertRaises(bootstrap.BootstrapError) as marker_error:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(marker_error.exception.code, "LEGACY_ROUTES_UNSUPPORTED")
+        self.assertEqual(repository_snapshot(self.root), before)
+
+    def test_existing_legacy_journal_is_rollback_only(self) -> None:
+        prepared = bootstrap.prepare_repository(
+            self.root,
+            self.plan,
+            self.accepted_plan_sha256,
+        )
+        transaction_id = prepared["transaction_id"]
+        transaction = self.root / ".coh" / ".bootstrap" / transaction_id
+        legacy_bytes = b'{"schema_version":1}\n'
+        backup = transaction / "backup" / "routes.json"
+        backup.write_bytes(legacy_bytes)
+        journal_path = transaction / "journal.json"
+        journal = load_json(journal_path)
+        journal["state"] = "LEGACY_RETIRED"
+        journal["legacy_routes"] = {
+            "expected_sha256": hashlib.sha256(legacy_bytes).hexdigest(),
+            "mode": 0o644,
+            "state": "RETIRED",
+        }
+        write_json(journal_path, journal)
+
+        before = repository_snapshot(self.root)
+        for operation in (
+            lambda: bootstrap.apply_repository(self.root, transaction_id),
+            lambda: bootstrap.publish_repository(self.root, transaction_id, None),
+            lambda: bootstrap.recover_repository(self.root, transaction_id, "resume"),
+        ):
+            with self.assertRaises(bootstrap.BootstrapError) as raised:
+                operation()
+            self.assertEqual(
+                raised.exception.code,
+                "LEGACY_RECOVERY_ROLLBACK_ONLY",
+            )
+            self.assertEqual(repository_snapshot(self.root), before)
+
+        status = bootstrap.status_repository(self.root, transaction_id)
+        self.assertEqual(status["status"], "LEGACY_RETIRED")
+        rolled_back = bootstrap.recover_repository(
+            self.root,
+            transaction_id,
+            "rollback",
+        )
+        self.assertEqual(rolled_back["status"], "ROLLED_BACK")
+        self.assertEqual((self.root / ".coh" / "routes.json").read_bytes(), legacy_bytes)
+        self.assertFalse(transaction.exists())
 
 
 if __name__ == "__main__":

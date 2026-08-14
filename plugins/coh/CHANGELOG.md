@@ -18,6 +18,8 @@
 
 ### Changed
 
+- Existing schema-v1 journals that contain a predecessor route retirement are
+  now status/rollback-only; apply, publish, and resume fail closed.
 - Limited BuildPlan v1 operations to exact `adopt|create` actions and removed
   unimplemented extension/pointer writes from the authorization vocabulary.
 - Changed `$coh:build` to require `$coh:build <plan_sha256>` in the Task that
@@ -33,6 +35,12 @@
   and recovery evidence for the exact checkout only. It is not behavioral,
   browser, provider, production, security, or human-review proof.
 - Release date and verified benchmark aggregates remain pending.
+
+### Removed
+
+- Removed `legacy_routes` from executable BuildPlan v1 and removed the unused
+  predecessor route-registry validator. Existing `.coh/routes.json` files are
+  rejection markers, not migration inputs.
 
 ## 0.3.0-alpha.3 - Unreleased
 

@@ -33,7 +33,7 @@
     ],
     "defaultPrompt": [
       "Use $coh:set-up to assess this repository without changing it.",
-      "Use $coh:build to construct an approved repository harness.",
+      "Use $coh:build <plan_sha256> in the same Task to construct the approved repository harness.",
       "Use $coh:check to validate the existing repository harness."
     ]
   }

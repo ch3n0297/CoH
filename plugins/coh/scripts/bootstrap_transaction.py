@@ -647,6 +647,11 @@ def _load_journal(root: Path, transaction_id: str) -> tuple[Path, dict[str, Any]
     return transaction, _validate_journal(payload, transaction_id)
 
 
+def _require_current_journal(journal: dict[str, Any]) -> None:
+    if journal["legacy_routes"] is not None:
+        raise BootstrapError("LEGACY_RECOVERY_ROLLBACK_ONLY")
+
+
 def _write_journal(transaction: Path, journal: dict[str, Any]) -> None:
     _atomic_json(_journal_path(transaction), journal)
 
@@ -875,26 +880,9 @@ def _load_plan(
             }
         )
 
-    legacy_record: dict[str, Any] | None = None
     legacy_path = root / REGISTRY_RELATIVE_PATH
-    if "legacy_routes" in raw_plan:
-        legacy = raw_plan["legacy_routes"]
-        if not isinstance(legacy, dict) or set(legacy) != {"path", "expected_sha256"}:
-            raise BootstrapError("INPUT_INVALID")
-        if _relative_path(legacy["path"]) != REGISTRY_RELATIVE_PATH:
-            raise BootstrapError("INPUT_INVALID")
-        expected = _digest(legacy["expected_sha256"])
-        _contained_path(root, REGISTRY_RELATIVE_PATH, must_exist=True, must_be_file=True)
-        data = _read_bounded(legacy_path, MAX_PLAN_BYTES)
-        if _sha256(data) != expected:
-            raise BootstrapError("PRECONDITION_CHANGED")
-        legacy_record = {
-            "expected_sha256": expected,
-            "mode": _mode(legacy_path),
-            "state": "PRESENT",
-        }
-    elif os.path.lexists(legacy_path):
-        raise BootstrapError("INPUT_INVALID")
+    if os.path.lexists(legacy_path):
+        raise BootstrapError("LEGACY_ROUTES_UNSUPPORTED")
 
     try:
         verify_plan_context(root, raw_plan, model_payload)
@@ -908,7 +896,6 @@ def _load_plan(
         "model_raw_sha256": model_raw_sha256,
         "model_semantic_sha256": _semantic_sha256(model_payload),
         "artifacts": artifacts,
-        "legacy_routes": legacy_record,
     }
 
 
@@ -1005,9 +992,7 @@ def prepare_repository(
         existing = _model_payload_no_follow(root)
         if _semantic_sha256(existing) != plan["model_semantic_sha256"]:
             raise BootstrapError("MODEL_ALREADY_EXISTS_DIFFERENT")
-        if plan["legacy_routes"] is not None or not _artifacts_satisfied(
-            root, plan["artifacts"]
-        ):
+        if not _artifacts_satisfied(root, plan["artifacts"]):
             raise BootstrapError("MODEL_INVALID")
         try:
             validate_model(root, plan["model_payload"])
@@ -1055,7 +1040,7 @@ def prepare_repository(
                 "state": "STAGED",
             },
             "artifacts": journal_artifacts,
-            "legacy_routes": plan["legacy_routes"],
+            "legacy_routes": None,
             "verification": None,
             "failure": None,
         }
@@ -1169,6 +1154,7 @@ def _apply_artifacts(
 def apply_repository(root: Path, transaction_id: str) -> dict[str, Any]:
     root = _root(root)
     transaction, journal = _load_journal(root, transaction_id)
+    _require_current_journal(journal)
     if journal["state"] == "ARTIFACTS_READY":
         return {"status": "ARTIFACTS_READY", "transaction_id": transaction_id}
     if journal["state"] != "PREPARED":
@@ -1280,85 +1266,14 @@ def _verify_ready_artifacts(root: Path, journal: dict[str, Any]) -> None:
             raise BootstrapError("PRECONDITION_CHANGED")
 
 
-def _retire_legacy(
-    root: Path,
-    transaction: Path,
-    journal: dict[str, Any],
-) -> None:
-    legacy = journal["legacy_routes"]
-    canonical = root / REGISTRY_RELATIVE_PATH
-    backup = _legacy_backup(transaction)
-    if legacy is None:
-        if os.path.lexists(canonical):
-            raise BootstrapError("PRECONDITION_CHANGED")
-        return
-    canonical_exists = os.path.lexists(canonical)
-    backup_exists = os.path.lexists(backup)
-    if (
-        legacy["state"] == "RETIRED"
-        and journal["model"]["state"] == "PUBLISHED"
-        and not backup_exists
-    ):
-        if canonical_exists:
-            # A legacy authority appearing after the committed retirement is a
-            # concurrent resurrection, not a backup to retire again.
-            raise BootstrapError("PRECONDITION_CHANGED")
-        return
-    if canonical_exists and backup_exists:
-        raise BootstrapError("RECOVERY_REQUIRED")
-    if backup_exists:
-        if backup.is_symlink() or not backup.is_file():
-            raise BootstrapError("RECOVERY_REQUIRED")
-        if _sha256(_read_bounded(backup, MAX_PLAN_BYTES)) != legacy["expected_sha256"]:
-            raise BootstrapError("RECOVERY_REQUIRED")
-        legacy["state"] = "RETIRED"
-        journal["state"] = "LEGACY_RETIRED"
-        _write_journal(transaction, journal)
-        return
-    if not canonical_exists:
-        if (
-            legacy["state"] == "RETIRED"
-            and journal["model"]["state"] == "PUBLISHED"
-            and _live_model_matches(root, journal["model"]["semantic_sha256"])
-        ):
-            return
-        raise BootstrapError("PRECONDITION_CHANGED")
-    if canonical.is_symlink() or not canonical.is_file():
-        raise BootstrapError("PRECONDITION_CHANGED")
-    if _sha256(_read_bounded(canonical, MAX_PLAN_BYTES)) != legacy["expected_sha256"]:
-        raise BootstrapError("PRECONDITION_CHANGED")
-    journal["state"] = "LEGACY_RETIRING"
-    _write_journal(transaction, journal)
-    try:
-        os.rename(canonical, backup)
-        _fsync_directory(canonical.parent)
-        _fsync_directory(backup.parent)
-    except OSError as exc:
-        raise BootstrapError("IO_FAILURE") from exc
-    legacy["state"] = "RETIRED"
-    journal["state"] = "LEGACY_RETIRED"
-    _write_journal(transaction, journal)
-
-
 def _finalize_commit(
     root: Path,
     transaction: Path,
     journal: dict[str, Any],
 ) -> None:
-    legacy = journal["legacy_routes"]
     canonical_legacy = root / REGISTRY_RELATIVE_PATH
     if os.path.lexists(canonical_legacy):
         raise BootstrapError("PRECONDITION_CHANGED")
-    if legacy is not None:
-        backup = _legacy_backup(transaction)
-        if backup.is_file() and not backup.is_symlink():
-            if _sha256(_read_bounded(backup, MAX_PLAN_BYTES)) != legacy["expected_sha256"]:
-                raise BootstrapError("RECOVERY_REQUIRED")
-            try:
-                backup.unlink()
-                _fsync_directory(backup.parent)
-            except OSError as exc:
-                raise BootstrapError("IO_FAILURE") from exc
     _safe_cleanup_transaction(
         root,
         transaction,
@@ -1373,6 +1288,7 @@ def _publish_core(
     journal: dict[str, Any],
     verification: str | Path | None,
 ) -> None:
+    _require_current_journal(journal)
     _verify_staging(transaction, journal)
     _verify_ready_artifacts(root, journal)
     try:
@@ -1400,7 +1316,8 @@ def _publish_core(
     target = _model_target(root)
     if target.is_file() and not _live_model_matches(root, journal["model"]["semantic_sha256"]):
         raise BootstrapError("MODEL_ALREADY_EXISTS_DIFFERENT")
-    _retire_legacy(root, transaction, journal)
+    if os.path.lexists(root / REGISTRY_RELATIVE_PATH):
+        raise BootstrapError("PRECONDITION_CHANGED")
     if not target.is_file():
         journal["state"] = "MODEL_PUBLISHING"
         _write_journal(transaction, journal)
@@ -1426,6 +1343,7 @@ def publish_repository(
 ) -> dict[str, Any]:
     root = _root(root)
     transaction, journal = _load_journal(root, transaction_id)
+    _require_current_journal(journal)
     if journal["state"] != "ARTIFACTS_READY":
         raise BootstrapError("RECOVERY_REQUIRED")
     try:
@@ -1611,6 +1529,7 @@ def recover_repository(root: Path, transaction_id: str, mode: str) -> dict[str, 
         return {"status": "ROLLED_BACK", "transaction_id": transaction_id}
     if mode != "resume":
         raise BootstrapError("INPUT_INVALID")
+    _require_current_journal(journal)
     try:
         if not _live_model_matches(root, journal["model"]["semantic_sha256"]):
             _apply_artifacts(root, transaction, journal)

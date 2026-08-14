@@ -166,6 +166,18 @@ legacy_configuration:
   runtime_authority: false
   migration_skill: false
   migration_command: false
+  build_plan_migration_field: false
+  new_transaction_migration: false
+  existing_schema_v1_journal:
+    compatibility_version: "0.3.0-alpha.3 only"
+    sunset: "remove legacy journal parsing in the next plugin version"
+    allowed:
+      - "status"
+      - "rollback"
+    forbidden:
+      - "apply"
+      - "publish"
+      - "resume"
   markers:
     ".hjc-code-harness": "LEGACY_NAMESPACE_UNSUPPORTED"
     ".coh/routes.json": "LEGACY_ROUTES_UNSUPPORTED"
