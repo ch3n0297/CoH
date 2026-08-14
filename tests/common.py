@@ -17,6 +17,7 @@ ROUTER = PLUGIN_ROOT / "hooks" / "user_prompt_router.py"
 COLLECTOR = PLUGIN_ROOT / "hooks" / "stop_receipt_collector.py"
 MODEL_VALIDATOR = PLUGIN_ROOT / "scripts" / "validate_harness_model.py"
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(PLUGIN_ROOT / "hooks"))
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 
@@ -89,6 +90,7 @@ def run_hook(
         env.pop(key, None)
     env["PLUGIN_ROOT"] = str(PLUGIN_ROOT)
     env["PLUGIN_DATA"] = str(data_root)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     completed = subprocess.run(
         [sys.executable, str(script)],
         input=json.dumps(event),

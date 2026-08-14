@@ -7,6 +7,7 @@ import argparse
 import ast
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -330,6 +331,8 @@ def main() -> int:
     if is_repository_package:
         errors.extend(validate_repository(REPOSITORY_ROOT, plugin_root))
     if not errors and is_repository_package and not args.skip_tests:
+        test_environment = os.environ.copy()
+        test_environment["PYTHONDONTWRITEBYTECODE"] = "1"
         completed = subprocess.run(
             [
                 sys.executable,
@@ -341,6 +344,7 @@ def main() -> int:
                 "-v",
             ],
             cwd=REPOSITORY_ROOT,
+            env=test_environment,
             check=False,
         )
         if completed.returncode != 0:

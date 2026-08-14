@@ -39,7 +39,7 @@ class PackageValidationTests(unittest.TestCase):
             installed = Path(temporary) / "coh"
             shutil.copytree(PLUGIN_ROOT, installed)
             cache = installed / "hooks" / "__pycache__"
-            cache.mkdir()
+            cache.mkdir(exist_ok=True)
             (cache / "runtime.pyc").write_bytes(b"not-a-real-bytecode-file")
             errors = validator.validate_plugin(installed)
             self.assertTrue(
