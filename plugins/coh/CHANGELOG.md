@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added
+
+- Added public deterministic tests and fixtures for Model validation, routing,
+  receipt rejection/acceptance, Hook privacy, and recoverable model-last Build
+  transactions.
+- Added `scripts/validate_package.py` as the single exact-checkout validation
+  entrypoint and Linux CI across supported Python versions.
+- Added an isolated installed-tree package closure smoke and explicit host
+  support matrix.
+
+### Changed
+
+- Clarified that `$coh:check` is an independent diagnostic Skill rather than a
+  mandatory third setup step.
+- Clarified that `READY` means construction closure, not tests passed or trusted
+  repository behavior.
+
+### Evidence boundary
+
+- Public deterministic validation establishes package, contract, Hook-runtime,
+  and recovery evidence for the exact checkout only. It is not behavioral,
+  browser, provider, production, security, or human-review proof.
 - Release date and verified benchmark aggregates remain pending.
 
 ## 0.3.0-alpha.3 - Unreleased

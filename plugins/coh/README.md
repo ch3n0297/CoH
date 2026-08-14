@@ -49,7 +49,9 @@ after you accept the Build Plan and `$coh:build` produces a valid, enabled,
    Build Plan.
 2. `$coh:build` requires an accepted current plan, then constructs only its
    authorized repository harness changes.
-3. `$coh:check` diagnoses the existing Harness Model without changing it.
+3. `$coh:check` independently diagnoses the existing Harness Model without
+   changing it; it is not a mandatory third setup step because Build performs
+   its own deterministic post-check.
 4. A `READY` model can route exact `[route:<id>]` tags or declared path prefixes.
 5. A repository-owned Sensor may produce a current nonce-bound receipt.
 6. Stop-time observations remain report-only candidates for human review.
@@ -76,6 +78,22 @@ python3 /path/to/installed/coh/scripts/validate_harness_model.py /absolute/path/
 
 CoH is a workflow and evidence-calibration aid, not a security boundary or
 cryptographic attestation system.
+
+`READY only means` that Harness construction closure is satisfied: the declared
+Model, routes, authorities, Sensors, and maintenance references are structurally
+valid for the live repository. It does not mean repository tests passed or that
+repository behavior is trusted.
+
+## Host support
+
+| Environment | Current contract |
+| --- | --- |
+| POSIX macOS/Linux | Supported target; Hooks invoke `python3`. Linux is covered by public CI and macOS requires the same POSIX command contract. |
+| WSL | Uses the Linux contract; it is not separately claimed as compatibility evidence. |
+| Native Windows | Not currently supported or claimed. The package does not yet provide a tested `commandWindows` override. |
+
+An installation or manifest check proves only that Codex can discover the
+package. It does not prove that a Hook command executed on an untested host.
 
 ## Legacy configurations
 

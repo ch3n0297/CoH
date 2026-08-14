@@ -32,6 +32,26 @@ Harness Model.
 See the [plugin README](plugins/coh/README.md) for behavior, safety boundaries,
 package contents, and upgrade guidance.
 
+## Validate this exact checkout
+
+The public deterministic validation entrypoint runs package closure checks,
+Python standard-library import checks, public fixtures, Hook regressions,
+receipt adversarial cases, and recoverable Bootstrap transaction tests:
+
+```bash
+python3 scripts/validate_package.py
+```
+
+This evidence applies only to the exact checked-out source. It does not prove
+that CoH improves coding-task behavior or establish browser, live-provider,
+production, security, or human-review evidence.
+
+## Host support
+
+The current Hook command contract targets POSIX environments with `python3` and
+is tested in Linux CI. Native Windows is not currently supported or claimed;
+WSL follows the Linux contract but is not a separate compatibility proof.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

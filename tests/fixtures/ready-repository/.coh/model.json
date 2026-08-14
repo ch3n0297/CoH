@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "construction": {
+    "status": "READY",
+    "blockers": []
+  },
+  "authorities": [
+    {
+      "id": "agents-root",
+      "kind": "agent-instructions",
+      "ref": {"path": "AGENTS.md"}
+    },
+    {
+      "id": "guide-auth",
+      "kind": "guide",
+      "ref": {"path": "docs/AUTH_GUIDE.md"}
+    },
+    {
+      "id": "fact-auth",
+      "kind": "fact",
+      "ref": {
+        "path": "CODEBASE_MAP.md",
+        "anchor_token": "FACT:auth"
+      }
+    },
+    {
+      "id": "validation-main",
+      "kind": "validation-declaration",
+      "ref": {
+        "path": "scripts/validate.sh",
+        "anchor_token": "COH_VALIDATION_ENTRYPOINT"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "id": "auth",
+      "explicit_tags": ["auth"],
+      "path_prefixes": ["src/auth", "tests"],
+      "authorities": {
+        "agents": ["agents-root"],
+        "guides": ["guide-auth"],
+        "facts": ["fact-auth"]
+      },
+      "sensor_id": "repo-validate",
+      "evidence_policy": "RECEIPT_REQUIRED"
+    }
+  ],
+  "sensors": [
+    {
+      "id": "repo-validate",
+      "declaration_authority_id": "validation-main",
+      "proof_layer": "runtime",
+      "receipt_path": ".coh/receipts/repo-validate.json",
+      "protected_paths": ["tests"]
+    }
+  ],
+  "maintenance": {
+    "owner_authority_ids": ["agents-root"],
+    "triggers": ["authority-change", "route-change", "sensor-change"]
+  }
+}
