@@ -1,6 +1,6 @@
 interface:
   display_name: "CoH Build"
   short_description: "Build an approved repository harness safely"
-  default_prompt: "Use $coh:build to construct the approved CoH Build Plan and verify the result."
+  default_prompt: "Use $coh:build <plan_sha256> in the same Task to construct the exact approved CoH BuildPlan v1 and verify the result."
 policy:
   allow_implicit_invocation: false

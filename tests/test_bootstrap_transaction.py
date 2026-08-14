@@ -1,17 +1,30 @@
 from __future__ import annotations
 
-import json
+import copy
+import hashlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from common import FIXTURE_ROOT, copy_fixture, load_json, sha256_file, write_json
+from common import (
+    FIXTURE_ROOT,
+    copy_fixture,
+    git,
+    load_json,
+    sha256_file,
+    write_json,
+)
 
 import bootstrap_transaction as bootstrap
+import build_plan
+from coh_hook_common import repository_id
 
 
 class BootstrapTransactionTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.previous_task_id = os.environ.get("CODEX_THREAD_ID")
+        os.environ["CODEX_THREAD_ID"] = "coh-bootstrap-test-task"
         self.temporary = tempfile.TemporaryDirectory(prefix="coh-bootstrap-")
         base = Path(self.temporary.name)
         self.root = copy_fixture(
@@ -27,37 +40,94 @@ class BootstrapTransactionTests(unittest.TestCase):
         )
         model = load_json(FIXTURE_ROOT / ".coh" / "model.json")
         write_json(self.plan_root / "model.json", model)
-        write_json(
-            self.plan_root / "plan.json",
-            {
-                "schema_version": 1,
-                "model_source": "model.json",
-                "artifacts": [
+        model_source = self.plan_root / "model.json"
+        guide_source = self.plan_root / "guide.md"
+        observed_inputs = []
+        for relative in (
+            ".coh/model.json",
+            "AGENTS.md",
+            "CODEBASE_MAP.md",
+            "docs/AUTH_GUIDE.md",
+            "scripts/validate.sh",
+        ):
+            candidate = self.root / relative
+            if candidate.is_file():
+                observed_inputs.append(
+                    {
+                        "path": relative,
+                        "state": "PRESENT",
+                        "sha256": sha256_file(candidate),
+                    }
+                )
+            else:
+                observed_inputs.append({"path": relative, "state": "ABSENT"})
+        self.plan_payload = {
+            "plan_version": 1,
+            "task_id_sha256": build_plan.current_task_id_sha256(),
+            "repository_id": repository_id(self.root),
+            "base_head_sha": git(self.root, "rev-parse", "HEAD"),
+            "observed_inputs": observed_inputs,
+            "model": {
+                "source": "model.json",
+                "raw_sha256": sha256_file(model_source),
+                "semantic_sha256": build_plan.semantic_sha256(model),
+            },
+            "operations": [
                     {
                         "id": "create-auth-guide",
                         "role": "guide",
                         "mode": "create",
                         "path": "docs/AUTH_GUIDE.md",
                         "source": "guide.md",
-                        "permissions": "file"
+                        "expected_sha256": sha256_file(guide_source),
+                        "permissions": "file",
                     },
                     {
                         "id": "adopt-validation",
                         "role": "sensor",
                         "mode": "adopt",
                         "path": "scripts/validate.sh",
-                        "expected_sha256": sha256_file(self.root / "scripts" / "validate.sh")
-                    }
-                ]
-            },
-        )
+                        "expected_sha256": sha256_file(
+                            self.root / "scripts" / "validate.sh"
+                        ),
+                    },
+            ],
+            "proof_boundaries": ["static", "runtime"],
+        }
         self.plan = self.plan_root / "plan.json"
+        self.write_current_plan()
+
+    def write_current_plan(self) -> None:
+        observed_inputs = []
+        for item in self.plan_payload["observed_inputs"]:
+            candidate = self.root / item["path"]
+            if candidate.is_file():
+                observed_inputs.append(
+                    {
+                        "path": item["path"],
+                        "state": "PRESENT",
+                        "sha256": sha256_file(candidate),
+                    }
+                )
+            else:
+                observed_inputs.append({"path": item["path"], "state": "ABSENT"})
+        self.plan_payload["observed_inputs"] = observed_inputs
+        self.plan.write_bytes(build_plan.canonical_json(self.plan_payload))
+        self.accepted_plan_sha256 = hashlib.sha256(self.plan.read_bytes()).hexdigest()
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+        if self.previous_task_id is None:
+            os.environ.pop("CODEX_THREAD_ID", None)
+        else:
+            os.environ["CODEX_THREAD_ID"] = self.previous_task_id
 
     def prepare_and_apply(self) -> str:
-        prepared = bootstrap.prepare_repository(self.root, self.plan)
+        prepared = bootstrap.prepare_repository(
+            self.root,
+            self.plan,
+            self.accepted_plan_sha256,
+        )
         self.assertEqual(prepared["status"], "PREPARED")
         transaction_id = prepared["transaction_id"]
         self.assertIsInstance(transaction_id, str)
@@ -77,7 +147,17 @@ class BootstrapTransactionTests(unittest.TestCase):
             bootstrap.status_repository(self.root, None)["status"],
             "NO_ACTIVE_TRANSACTION",
         )
-        noop = bootstrap.prepare_repository(self.root, self.plan)
+        with self.assertRaises(bootstrap.BootstrapError) as raised:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(raised.exception.code, "PLAN_INPUT_CHANGED")
+        self.write_current_plan()
+        noop = bootstrap.prepare_repository(
+            self.root, self.plan, self.accepted_plan_sha256
+        )
         self.assertEqual(noop, {"status": "NOOP", "transaction_id": None})
 
     def test_publish_failure_can_resume_without_clobber(self) -> None:
@@ -104,7 +184,11 @@ class BootstrapTransactionTests(unittest.TestCase):
         self.assertTrue((self.root / ".coh" / "model.json").is_file())
 
     def test_concurrent_target_is_preserved_and_fails_closed(self) -> None:
-        prepared = bootstrap.prepare_repository(self.root, self.plan)
+        prepared = bootstrap.prepare_repository(
+            self.root,
+            self.plan,
+            self.accepted_plan_sha256,
+        )
         transaction_id = prepared["transaction_id"]
         concurrent = self.root / "docs" / "AUTH_GUIDE.md"
         concurrent.write_text("# Concurrent human-owned Guide\n", encoding="utf-8")
@@ -120,6 +204,81 @@ class BootstrapTransactionTests(unittest.TestCase):
             bootstrap.status_repository(self.root, transaction_id)["status"],
             "RECOVERY_REQUIRED",
         )
+
+    def test_accepted_digest_must_match_canonical_plan_bytes(self) -> None:
+        changed = copy.deepcopy(self.plan_payload)
+        changed["proof_boundaries"] = ["static"]
+        self.plan.write_bytes(build_plan.canonical_json(changed))
+        with self.assertRaises(bootstrap.BootstrapError) as raised:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(raised.exception.code, "PLAN_ACCEPTANCE_MISMATCH")
+
+    def test_noncanonical_plan_is_rejected(self) -> None:
+        write_json(self.plan, self.plan_payload)
+        digest = hashlib.sha256(self.plan.read_bytes()).hexdigest()
+        with self.assertRaises(bootstrap.BootstrapError) as raised:
+            bootstrap.prepare_repository(self.root, self.plan, digest)
+        self.assertEqual(raised.exception.code, "PLAN_NOT_CANONICAL")
+
+    def test_cross_task_and_cross_repository_replay_are_rejected(self) -> None:
+        os.environ["CODEX_THREAD_ID"] = "another-task"
+        with self.assertRaises(bootstrap.BootstrapError) as task_error:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(task_error.exception.code, "PLAN_TASK_MISMATCH")
+
+        os.environ["CODEX_THREAD_ID"] = "coh-bootstrap-test-task"
+        second_root = copy_fixture(
+            Path(self.temporary.name) / "second-repository",
+            include_model=False,
+            include_guide=False,
+        )
+        with self.assertRaises(bootstrap.BootstrapError) as repository_error:
+            bootstrap.prepare_repository(
+                second_root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(
+            repository_error.exception.code,
+            "PLAN_REPOSITORY_MISMATCH",
+        )
+
+    def test_stale_head_and_changed_authority_are_rejected(self) -> None:
+        (self.root / "src" / "auth" / "module.py").write_text(
+            "VALUE = 2\n",
+            encoding="utf-8",
+        )
+        git(self.root, "add", "src/auth/module.py")
+        git(self.root, "commit", "-q", "-m", "advance head")
+        with self.assertRaises(bootstrap.BootstrapError) as head_error:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(head_error.exception.code, "PLAN_HEAD_STALE")
+
+        self.plan_payload["base_head_sha"] = git(self.root, "rev-parse", "HEAD")
+        self.write_current_plan()
+        (self.root / "AGENTS.md").write_text(
+            "# Concurrent authority change\n",
+            encoding="utf-8",
+        )
+        with self.assertRaises(bootstrap.BootstrapError) as input_error:
+            bootstrap.prepare_repository(
+                self.root,
+                self.plan,
+                self.accepted_plan_sha256,
+            )
+        self.assertEqual(input_error.exception.code, "PLAN_INPUT_CHANGED")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,10 @@
 
 ### Added
 
+- Added canonical BuildPlan v1 schema and a dependency-free, read-only Plan
+  context/inspection helper.
+- Added same-Task, repository, HEAD, material-input, candidate-source, and
+  accepted-digest bindings before any Build transaction can be prepared.
 - Added public deterministic tests and fixtures for Model validation, routing,
   receipt rejection/acceptance, Hook privacy, and recoverable model-last Build
   transactions.
@@ -14,6 +18,10 @@
 
 ### Changed
 
+- Limited BuildPlan v1 operations to exact `adopt|create` actions and removed
+  unimplemented extension/pointer writes from the authorization vocabulary.
+- Changed `$coh:build` to require `$coh:build <plan_sha256>` in the Task that
+  produced the canonical Plan.
 - Clarified that `$coh:check` is an independent diagnostic Skill rather than a
   mandatory third setup step.
 - Clarified that `READY` means construction closure, not tests passed or trusted

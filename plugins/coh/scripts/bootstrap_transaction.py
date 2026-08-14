@@ -30,8 +30,13 @@ from coh_hook_common import (
     _exact_keys,
     load_json_object,
 )
+from build_plan import (
+    BuildPlanError,
+    load_build_plan,
+    semantic_sha256 as build_plan_semantic_sha256,
+    verify_plan_context,
+)
 
-PLAN_SCHEMA_VERSION = 1
 JOURNAL_SCHEMA_VERSION = 1
 MAX_PLAN_BYTES = 64 * 1024
 MAX_JOURNAL_BYTES = 256 * 1024
@@ -730,7 +735,11 @@ def _safe_cleanup_transaction(
         raise BootstrapError("IO_FAILURE") from exc
 
 
-def _load_plan(root: Path, plan_value: str | Path) -> dict[str, Any]:
+def _load_plan(
+    root: Path,
+    plan_value: str | Path,
+    accepted_plan_sha256: str,
+) -> dict[str, Any]:
     plan_candidate = Path(plan_value).expanduser()
     if plan_candidate.is_symlink():
         raise BootstrapError("INPUT_INVALID")
@@ -741,32 +750,33 @@ def _load_plan(root: Path, plan_value: str | Path) -> dict[str, Any]:
     if not plan_path.is_file():
         raise BootstrapError("INPUT_INVALID")
     try:
-        raw_plan, plan_sha256 = load_json_object(plan_path, MAX_PLAN_BYTES)
-    except ContractError as exc:
-        raise BootstrapError("INPUT_INVALID") from exc
-    try:
-        _exact_keys(
-            raw_plan,
-            {"schema_version", "model_source", "artifacts"},
-            {"legacy_routes"},
-            "PLAN_FIELDS",
-        )
-    except ContractError as exc:
-        raise BootstrapError("INPUT_INVALID") from exc
-    if type(raw_plan["schema_version"]) is not int or raw_plan["schema_version"] != 1:
+        raw_plan, plan_sha256 = load_build_plan(plan_path)
+    except BuildPlanError as exc:
+        raise BootstrapError(exc.code) from exc
+    if not isinstance(accepted_plan_sha256, str) or not DIGEST.fullmatch(
+        accepted_plan_sha256
+    ):
         raise BootstrapError("INPUT_INVALID")
-    artifacts_raw = raw_plan["artifacts"]
+    if plan_sha256 != accepted_plan_sha256:
+        raise BootstrapError("PLAN_ACCEPTANCE_MISMATCH")
+    artifacts_raw = raw_plan["operations"]
     if not isinstance(artifacts_raw, list) or len(artifacts_raw) > MAX_ARTIFACTS:
         raise BootstrapError("INPUT_INVALID")
 
     plan_directory = plan_path.parent.resolve(strict=True)
-    _, model_source = _source_path(plan_directory, raw_plan["model_source"])
+    model_record = raw_plan["model"]
+    _, model_source = _source_path(plan_directory, model_record["source"])
     try:
         model_payload, model_raw_sha256 = load_json_object(model_source, MAX_MODEL_BYTES)
     except ContractError as exc:
         raise BootstrapError("INPUT_INVALID") from exc
     model_bytes = _read_bounded(model_source, MAX_MODEL_BYTES)
-    if _sha256(model_bytes) != model_raw_sha256:
+    if (
+        _sha256(model_bytes) != model_raw_sha256
+        or model_raw_sha256 != model_record["raw_sha256"]
+        or build_plan_semantic_sha256(model_payload)
+        != model_record["semantic_sha256"]
+    ):
         raise BootstrapError("PRECONDITION_CHANGED")
 
     artifacts: list[dict[str, Any]] = []
@@ -780,7 +790,15 @@ def _load_plan(root: Path, plan_value: str | Path) -> dict[str, Any]:
         if mode == "adopt":
             required = {"id", "role", "mode", "path", "expected_sha256"}
         elif mode == "create":
-            required = {"id", "role", "mode", "path", "source", "permissions"}
+            required = {
+                "id",
+                "role",
+                "mode",
+                "path",
+                "source",
+                "expected_sha256",
+                "permissions",
+            }
         else:
             raise BootstrapError("INPUT_INVALID")
         if set(raw) != required:
@@ -829,6 +847,8 @@ def _load_plan(root: Path, plan_value: str | Path) -> dict[str, Any]:
         _, source = _source_path(plan_directory, raw["source"])
         source_bytes = _read_bounded(source, MAX_ARTIFACT_BYTES)
         source_digest = _sha256(source_bytes)
+        if source_digest != raw["expected_sha256"]:
+            raise BootstrapError("PRECONDITION_CHANGED")
         total_staged += len(source_bytes)
         if total_staged > MAX_TOTAL_STAGED_BYTES:
             raise BootstrapError("INPUT_INVALID")
@@ -875,6 +895,11 @@ def _load_plan(root: Path, plan_value: str | Path) -> dict[str, Any]:
         }
     elif os.path.lexists(legacy_path):
         raise BootstrapError("INPUT_INVALID")
+
+    try:
+        verify_plan_context(root, raw_plan, model_payload)
+    except BuildPlanError as exc:
+        raise BootstrapError(exc.code) from exc
 
     return {
         "plan_sha256": plan_sha256,
@@ -966,11 +991,15 @@ def _artifacts_satisfied(root: Path, artifacts: list[dict[str, Any]]) -> bool:
     return True
 
 
-def prepare_repository(root: Path, plan_path: str | Path) -> dict[str, Any]:
+def prepare_repository(
+    root: Path,
+    plan_path: str | Path,
+    accepted_plan_sha256: str,
+) -> dict[str, Any]:
     root = _root(root)
     if _active_transactions(root):
         raise BootstrapError("ACTIVE_TRANSACTION_EXISTS")
-    plan = _load_plan(root, plan_path)
+    plan = _load_plan(root, plan_path, accepted_plan_sha256)
     model_target = _model_target(root)
     if os.path.lexists(model_target):
         existing = _model_payload_no_follow(root)
@@ -1619,6 +1648,7 @@ def parse_args() -> argparse.Namespace:
     prepare = subparsers.add_parser("prepare")
     prepare.add_argument("--repository", required=True)
     prepare.add_argument("--plan", required=True)
+    prepare.add_argument("--accepted-plan-sha256", required=True)
     prepare.add_argument("--json", action="store_true")
 
     apply = subparsers.add_parser("apply")
@@ -1650,7 +1680,11 @@ def main() -> int:
     try:
         root = _root(args.repository)
         if args.command == "prepare":
-            result = prepare_repository(root, args.plan)
+            result = prepare_repository(
+                root,
+                args.plan,
+                args.accepted_plan_sha256,
+            )
         elif args.command == "apply":
             result = apply_repository(root, args.transaction)
         elif args.command == "publish":

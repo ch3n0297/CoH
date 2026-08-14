@@ -35,6 +35,7 @@ ALLOWED_DIRECTORIES = {
 ALLOWED_SUFFIXES = {".json", ".md", ".png", ".py", ".yaml"}
 LOCAL_MODULES = {
     "bootstrap_transaction",
+    "build_plan",
     "coh_hook_common",
     "harness_model",
     "record_episode_review",

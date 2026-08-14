@@ -18,9 +18,10 @@ $coh:set-up
 ```
 
 Installing CoH does not opt a repository in automatically. Set Up only inspects
-and plans. Invoke `$coh:build` after accepting that plan, then use `$coh:check`
-for read-only diagnosis. Routing is enabled only by a valid, enabled, `READY`
-Harness Model.
+and produces canonical BuildPlan v1 bytes plus a digest. Accept that exact Plan
+in the same Task with `$coh:build <plan_sha256>`. Use `$coh:check` later for
+independent read-only diagnosis. Routing is enabled only by a valid, enabled,
+`READY` Harness Model.
 
 ## Package
 

@@ -26,8 +26,9 @@ $coh:set-up
 ```
 
 Installing the plugin alone does not opt a repository in. Routing begins only
-after you accept the Build Plan and `$coh:build` produces a valid, enabled,
-`READY` `.coh/model.json`.
+after you accept the canonical BuildPlan v1 digest in the same Task with
+`$coh:build <plan_sha256>` and Build produces a valid, enabled, `READY`
+`.coh/model.json`.
 
 ## What is included
 
@@ -40,15 +41,15 @@ after you accept the Build Plan and `$coh:build` produces a valid, enabled,
 - `hooks/*.py` — dependency-free Python runtime for model loading, routing,
   containment checks, nonce binding, and receipt review.
 - `schemas/` — Harness Model, validation receipt, and episode review schemas.
-- `scripts/` — model validation, recoverable Build transactions, and report-only
-  review helpers.
+- `scripts/` — canonical Build Plan inspection, model validation, recoverable
+  Build transactions, and report-only review helpers.
 
 ## Core behavior
 
-1. `$coh:set-up` performs a read-only Need Gate and produces an evidence-backed
-   Build Plan.
-2. `$coh:build` requires an accepted current plan, then constructs only its
-   authorized repository harness changes.
+1. `$coh:set-up` performs a read-only Need Gate and produces canonical,
+   task-bound BuildPlan v1 bytes plus `plan_sha256`.
+2. `$coh:build <plan_sha256>` requires same-Task acceptance, then rechecks HEAD
+   and every material input before constructing authorized repository changes.
 3. `$coh:check` independently diagnoses the existing Harness Model without
    changing it; it is not a mandatory third setup step because Build performs
    its own deterministic post-check.
@@ -66,7 +67,9 @@ python3 /path/to/installed/coh/scripts/validate_harness_model.py /absolute/path/
 
 - Hooks do not run arbitrary repository commands or block tools.
 - Set Up and Check are read-only. Build writes only within an accepted current
-  Build Plan.
+  canonical BuildPlan v1 whose digest was accepted in the same Task.
+- Build Plans stay outside the repository and never become a second `.coh/`
+  authority. Journals retain only their digest and recovery preconditions.
 - Hooks never inherit Build authorization or edit Guide files, Fact Maps,
   `AGENTS.md`, tests, validation logic, CI, or deployment configuration.
 - Missing, stale, ambiguous, or invalid evidence never becomes a pass.

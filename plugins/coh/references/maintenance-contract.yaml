@@ -1,4 +1,4 @@
-contract_version: 5
+contract_version: 6
 
 applies_when:
   - "set_up_harness"
@@ -92,12 +92,11 @@ authorization:
     external_mutation: false
   build:
     repository_local_mutation: true
-    requires: "accepted current Build Plan and explicit $coh:build invocation"
+    requires: "same-task canonical BuildPlan v1 plus explicit $coh:build <plan_sha256> invocation"
     allowed_within_accepted_plan:
       - "create canonical model and recoverable Bootstrap journal"
       - "create a new currently-unowned Guide or Sensor"
-      - "update a clearly machine-owned extension block"
-      - "add a removable pointer block without rewriting surrounding human content"
+      - "adopt an unchanged existing authority or Sensor by recorded digest"
       - "run a confirmed repository-local side-effect-free validation command"
     must_stop_before:
       - "rewrite human-owned authority, meaning, or precedence"
@@ -244,6 +243,31 @@ bootstrap_transaction:
   terminal_states:
     - "READY"
     - "BLOCKED"
+
+build_plan:
+  version: 1
+  format: "canonical JSON with sorted keys, compact separators, UTF-8, and one trailing newline"
+  digest: "SHA-256 of the exact canonical bytes displayed to the user"
+  same_task_binding: "SHA-256 of CODEX_THREAD_ID"
+  repository_binding:
+    - "opaque repository id"
+    - "base HEAD sha"
+    - "complete material authority and candidate-target input closure"
+  operation_modes:
+    - "adopt"
+    - "create"
+  repository_persistence: false
+  transaction_persistence:
+    - "plan digest"
+    - "artifact and model preconditions required for recovery"
+  invalidation:
+    - "task mismatch"
+    - "repository mismatch"
+    - "HEAD changed"
+    - "material input changed"
+    - "candidate source changed"
+    - "accepted digest mismatch"
+  proof_limit: "byte equality and stale/replay prevention, not signed human identity or intent"
 
 self_improvement_loop:
   output_location: "PLUGIN_DATA"
