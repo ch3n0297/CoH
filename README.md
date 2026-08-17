@@ -1,6 +1,19 @@
-# CoH
+<h1 align="center">CoH</h1>
 
-[![Validate CoH package](https://github.com/ch3n0297/CoH/actions/workflows/validate.yml/badge.svg)](https://github.com/ch3n0297/CoH/actions/workflows/validate.yml)
+<p align="center">
+  <a href="https://github.com/ch3n0297/CoH/actions/workflows/validate.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/ch3n0297/CoH/validate.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="CI status">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/ch3n0297/CoH?style=flat-square" alt="MIT License">
+  </a>
+  <a href="plugins/coh/README.md">
+    <img src="https://img.shields.io/badge/Codex-Plugin-000000?style=flat-square" alt="Codex Plugin">
+  </a>
+  <a href="plugins/coh/README.md">
+    <img src="https://img.shields.io/badge/Python-3%20stdlib%20only-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3 standard library only">
+  </a>
+</p>
 
 **Repository-specific guidance and validation routing for Codex.**
 
